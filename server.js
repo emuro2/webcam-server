@@ -1,6 +1,12 @@
+var fs = require('fs')
 var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var https = require('https');
+var options = {
+  key: fs.readFileSync('./config/local.key'),
+  cert: fs.readFileSync('./config/local.crt')
+};
+var server = https.createServer(options, app);
+var io = require('socket.io')(server);
 
 app.get('/', function(req, res){
     res.sendFile(__dirname + '/index.html');
@@ -16,6 +22,6 @@ io.on('connection', function(socket){
      });
 });
 
-http.listen(3000, function(){
-    console.log('listening on *:3000');
+server.listen(443, function(){
+    console.log('listening on 443');
 });
