@@ -1,0 +1,19 @@
+{
+  "name": "webcam-server",
+  "version": "0.0.1",
+  "description": "webcam server application for serving different webcam clients",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emuro2/webcam-server.git"
+  },
+  "author": "emuro2",
+  "homepage": "https://github.com/emuro2/webcam-server#readme",
+  "dependencies": {
+    "express": "4.14.0",
+    "socket.io": "1.7.1"
+  }
+}
