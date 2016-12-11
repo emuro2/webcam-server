@@ -27,29 +27,96 @@
             $('#messages').append($('<li>').text(msg));
         });
 
-        socket.on('image', function(image){
-            var uint8Arr = new Uint8Array(image);
-            var binary = '';
-            for (var i = 0; i < uint8Arr.length; i++) {
-                binary += String.fromCharCode(uint8Arr[i]);
-            }
-            var base64String = window.btoa(binary);
+        socket.on('test', function(msg){
+            console.log("testing"+msg);
+        });
 
-            var img = new Image();
-            img.onload = function() {
-                console.log("replacing image");
-                var canvas = document.getElementById('webcam');
-                var ctx = canvas.getContext('2d');
-                var x = 0, y = 0;
-                ctx.drawImage(this, x, y);
+        var minmax = function (min, v, max) {
+            return (v < min) ? min : (max < v) ? max : v;
+        };
+        var yuv2r = function (y, u, v) {
+            return minmax(0, (y + 359 * v) >> 8, 255);
+        };
+        var yuv2g = function (y, u, v) {
+            return minmax(0, (y + 88 * v - 183 * u) >> 8, 255);
+        };
+        var yuv2b = function (y, u, v) {
+            return minmax(0, (y + 454 * u) >> 8, 255);
+        };
+        var yuyv2rgba = function (yuyv, rgba, width, height) {
+            for (var i = 0; i < height; i++) {
+                for (var j = 0; j < width; j += 2) {
+                    var index = i * width + j;
+                    var y0 = yuyv[index * 2 + 0] << 8;
+                    var u = yuyv[index * 2 + 1] - 128;
+                    var y1 = yuyv[index * 2 + 2] << 8;
+                    var v = yuyv[index * 2 + 3] - 128;
+                    rgba[index * 4 + 0] = yuv2r(y0, u, v);
+                    rgba[index * 4 + 1] = yuv2g(y0, u, v);
+                    rgba[index * 4 + 2] = yuv2b(y0, u, v);
+                    rgba[index * 4 + 3] = 255;
+                    rgba[index * 4 + 4] = yuv2r(y1, u, v);
+                    rgba[index * 4 + 5] = yuv2g(y1, u, v);
+                    rgba[index * 4 + 6] = yuv2b(y1, u, v);
+                    rgba[index * 4 + 7] = 255;
+                }
             }
-            img.src = 'data:image/png;base64,' + base64String;
+            return rgba;
+        };
+        var rgb2rgba = function (rgb, rgba, width, height) {
+            for (var i = 0; i < height; i++) {
+                for (var j = 0; j < width; j++) {
+                    var index = i * width + j;
+                    rgba[index * 4 + 0] = rgb[index * 3 + 0];
+                    rgba[index * 4 + 1] = rgb[index * 3 + 1];
+                    rgba[index * 4 + 2] = rgb[index * 3 + 2];
+                    rgba[index * 4 + 3] = 255;
+                }
+            }
+            return rgba;
+        };
+
+        var cam = document.getElementById("webcam");
+        var c2d = cam.getContext("2d");
+        var image = c2d.createImageData(320, 240);
+
+        socket.emit('get image');
+        socket.on('image', function(imageBuf){
+            console.log("incoming image");
+            // var uint8Arr = new Uint8Array(image);
+            // var binary = '';
+            // for (var i = 0; i < uint8Arr.length; i++) {
+            //     binary += String.fromCharCode(uint8Arr[i]);
+            // }
+            // var base64String = window.btoa(binary);
+            //
+            // var img = new Image();
+            // img.onload = function() {
+            //     console.log("replacing image");
+            //     var canvas = document.getElementById('webcam');
+            //     var ctx = canvas.getContext('2d');
+            //     var x = 0, y = 0;
+            //     ctx.drawImage(this, x, y);
+            // }
+            // img.src = 'data:image/png;base64,' + base64String;
+
+                var yuyv = new Uint8Array(imageBuf);
+                yuyv2rgba(yuyv, image.data, image.width, image.height);
+                //var rgb = new Uint8Array(req.response);
+                //rgb2rgba(rgb, image.data, image.width, image.height);
+                c2d.putImageData(image, 0, 0);
+                // setTimeout(load, 100);
+
+                // socket.emit('get image');
+                 setTimeout(function(){
+                     socket.emit('get image');
+                 }, 100);
         });
     });
     </script>
 </head>
 <body>
-    <canvas id="webcam" width="240" height="297" style="border:1px solid #d3d3d3;"></canvas>
+    <canvas id="webcam" width="720" height="576" style="border:1px solid #d3d3d3;"></canvas>
     <ul id="messages"></ul>
     <form action="">
         <input id="m" autocomplete="off" /><button type="submit">Send</button>
